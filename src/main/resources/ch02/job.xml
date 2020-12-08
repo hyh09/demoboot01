@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bean:beans xmlns="http://www.springframework.org/schema/batch"
+            xmlns:bean="http://www.springframework.org/schema/beans"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xmlns:p="http://www.springframework.org/schema/p"
+            xmlns:tx="http://www.springframework.org/schema/tx"
+            xmlns:aop="http://www.springframework.org/schema/aop"
+            xmlns:context="http://www.springframework.org/schema/context"
+            xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+    http://www.springframework.org/schema/tx
+    http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+    http://www.springframework.org/schema/aop
+    http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+    http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context-2.5.xsd
+    http://www.springframework.org/schema/batch
+    http://www.springframework.org/schema/batch/spring-batch-2.2.xsd">
+
+
+    <!--引入job-context.xml配置文件-->
+    <bean:import resource="classpath:ch02/job-context.xml"/>
+    <!--定义billJob billStep 包含读数据  处理数据 写数据-->
+    <job id="billJob">
+        <step id="billStep">
+            <tasklet transaction-manager="transactionManager">
+                <!--commit-interval="2" 表示任务提交间隔的大小 此处表示每处理2条数据 进行一次写入操作-->
+                <chunk reader="csvItemReader"
+                       writer="csvItemWriter"
+                       processor="creditBillProcessor" commit-interval="2">
+                </chunk>
+            </tasklet>
+        </step>
+    </job>
+    <!-- 读取信用卡账单文件,CSV格式 -->
+    <bean:bean id="csvItemReader"
+               class="org.springframework.batch.item.file.FlatFileItemReader"
+               scope="step">
+        <!--设置读取的文件资源-->
+        <bean:property name="resource"
+                       value="classpath:ch02/data/credit-card-bill-201303.csv"/>
+        <!--将文本中的每行记录转换为领域对象-->
+        <bean:property name="lineMapper">
+            <bean:bean class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+                <!--引用lineTokenizer-->
+                <bean:property name="lineTokenizer" ref="lineTokenizer"/>
+                <!--fieldSetMapper根据lineTokenizer中定义的names属性映射到领域对象中去-->
+                <bean:property name="fieldSetMapper">
+                    <bean:bean class="org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper">
+                        <bean:property name="prototypeBeanName" value="creditBill">
+                        </bean:property>
+                    </bean:bean>
+                </bean:property>
+            </bean:bean>
+        </bean:property>
+    </bean:bean>
+
+
+    <!-- lineTokenizer 定义文本中每行的分隔符号 以及每行映射成FieldSet对象后的name列表 -->
+    <bean:bean id="lineTokenizer"
+               class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+        <bean:property name="delimiter" value=","/> <!-- 分隔符策略为 ,;并将分隔后的字段映射到属性 names 中定义的字段上，-->
+        <bean:property name="names">
+            <bean:list>
+                <bean:value>accountID</bean:value>
+                <bean:value>name</bean:value>
+                <bean:value>amount</bean:value>
+                <bean:value>date</bean:value>
+                <bean:value>address</bean:value>
+            </bean:list>
+        </bean:property>
+    </bean:bean>
+
+
+    <!-- 处理类定义
+         返回的数据会被写操作 ItemWriter 处理
+    -->
+    <bean:bean id="creditBillProcessor" scope="step"   class="com.example.demobatch.ch02.CreditBillProcessor"/>
+    <bean:bean id="creditBill" scope="prototype"
+               class="com.example.demobatch.ch02.entity.CreditBill">
+    </bean:bean>
+     <!--
+        配置 ItemWriter
+         将处理后的信用账单对象 CreditBill 写入到本地文件  outputFile.csv中；
+         写信用卡账单文件，csv格式
+      -->
+      <!--<bean:bean id="csvItemWriter" class="org.springframework.batch.item.file.FlatFileItemWriter" scope="step">-->
+           <!--<bean:property name="resource" value="file:ch02/data/outputFile.csv"/>-->
+
+           <!--<bean:property name="lineAggregator">-->
+               <!--<bean:bean class="org.springframework.batch.item.file.transform.DelimitedLineAggregator">-->
+                    <!--<bean:property name="delimiter" value=","></bean:property>-->
+                   <!--<bean:property name="fieldExtractor">-->
+                         <!--<bean:bean class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">-->
+                              <!--<bean:property name="names" value="accountID,name,amount,date,address"/>-->
+                         <!--</bean:bean>-->
+                   <!--</bean:property>-->
+               <!--</bean:bean>-->
+           <!--</bean:property>-->
+      <!--</bean:bean>-->
+
+
+    <!-- 写信用卡账单文件，CSV格式 -->
+    <bean:bean id="csvItemWriter"
+               class="org.springframework.batch.item.file.FlatFileItemWriter"
+               scope="step">
+        <bean:property name="resource" value="file:target/ch02/outputFile.csv"/>
+        <bean:property name="lineAggregator">
+            <bean:bean
+                    class="org.springframework.batch.item.file.transform.DelimitedLineAggregator">
+                <bean:property name="delimiter" value=","></bean:property>
+                <bean:property name="fieldExtractor">
+                    <bean:bean
+                            class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">
+                        <bean:property name="names"
+                                       value="accountID,name,amount,date,address">
+                        </bean:property>
+                    </bean:bean>
+                </bean:property>
+            </bean:bean>
+        </bean:property>
+    </bean:bean>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</bean:beans>
