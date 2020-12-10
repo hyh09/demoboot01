@@ -12,6 +12,9 @@ import org.springframework.batch.item.ItemProcessor;
  */
 public class CreditBillProcessor implements ItemProcessor<CreditBill, CreditBill> {
 
+
+
+
     @Override
     public CreditBill process(CreditBill creditBill) throws Exception {
         System.out.println("读取的数据"+creditBill.toString());
